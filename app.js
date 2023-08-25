@@ -11,6 +11,11 @@ const key = fs.readFileSync(process.env.KEY, 'utf8');
 const endpoint = process.env.ENDPOINT
 const topic = "sdk/test/js";
 
+const lastLog = fs.readFileSync('./dataLog.txt', 'utf8');
+const dataLog = new console.Console(fs.createWriteStream('./dataLog.txt'));
+dataLog.log(lastLog);
+dataLog.log('------------------RESTART----------------');
+
 const deviceList = [
   "f2ab73195979",                 
   "6055f9716c62"
@@ -35,22 +40,31 @@ client.on('connect', function () {
 })
 
 scanner.onadvertisement = (ad) => {
-    const msg = {
-        id: ad["id"],
-        rssi: ad["rssi"],
-        uuid: ad["iBeacon"]["uuid"],
-        txPower: ad["iBeacon"]["txPower"]
-    }
-    const json = JSON.stringify(msg, null, '   ');
-    if (deviceList.includes(ad["id"])){
+  var temp = fs.readFileSync("/sys/class/thermal/thermal_zone0/temp");
+  var temp_c = temp/1000;
+
+  var dateTime = new Date();
+  var localDateTime = dateTime.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' });
+
+  const msg = {
+    localDateTime: localDateTime,
+    id: ad["id"],
+    rssi: ad["rssi"],
+    uuid: ad["iBeacon"]["uuid"],
+    txPower: ad["iBeacon"]["txPower"],
+    raspiTemp: temp_c
+  };
+  const json = JSON.stringify(msg);
+  dataLog.log(json);
+  if (deviceList.includes(ad["id"])){
     console.log('iBeacon is found!')
-    if (client){
-        client.publish(topic, json, { qos: 0, retain: false }, (error) => {
-            if (error){
-                console.log(error)
-            }
-        })
-    }
+    // if (client){
+    //     client.publish(topic, json, { qos: 0, retain: false }, (error) => {
+    //         if (error){
+    //             console.log(error)
+    //         }
+    //     })
+    // }
   }
   console.log(json)
 };
